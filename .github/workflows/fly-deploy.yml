@@ -28,6 +28,10 @@ jobs:
       - uses: superfly/flyctl-actions/setup-flyctl@v1.4
 
       - name: Deploy
-        run: flyctl deploy --remote-only -c ${{ inputs.fly-config-path }}
+        # --local-only: build the image on this runner (which already has the
+        # source, as your own CI) and push only the finished image to Fly's
+        # registry — Fly's own build infra never receives the source tree.
+        # Requires Docker on the runner (ubuntu-latest has it preinstalled).
+        run: flyctl deploy --local-only -c ${{ inputs.fly-config-path }}
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
