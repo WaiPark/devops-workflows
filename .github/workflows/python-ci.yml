@@ -1,0 +1,67 @@
+name: Reusable Python CI
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        description: "Python version to test against"
+        type: string
+        default: "3.11"
+      working-directory:
+        description: "Directory containing requirements-dev.txt / pyproject.toml (repo root by default)"
+        type: string
+        default: "."
+      requirements-file:
+        description: "Path (relative to working-directory) to the dev requirements file"
+        type: string
+        default: "requirements-dev.txt"
+      run-lint:
+        type: boolean
+        default: true
+      run-tests:
+        type: boolean
+        default: true
+      docker-build:
+        description: "Also build the Docker image as a build-health check"
+        type: boolean
+        default: true
+      dockerfile:
+        description: "Path (relative to working-directory) to the Dockerfile"
+        type: string
+        default: "Dockerfile"
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r ${{ inputs.requirements-file }}
+
+      - name: Lint (ruff)
+        if: ${{ inputs.run-lint }}
+        run: ruff check .
+
+      - name: Tests (pytest)
+        if: ${{ inputs.run-tests }}
+        run: python -m pytest -q
+
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+    if: ${{ inputs.docker-build }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        working-directory: ${{ inputs.working-directory }}
+        run: docker build -f ${{ inputs.dockerfile }} -t ci-build:${{ github.sha }} .

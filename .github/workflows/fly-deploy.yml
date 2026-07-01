@@ -1,0 +1,33 @@
+name: Reusable Fly.io Deploy
+
+on:
+  workflow_call:
+    inputs:
+      working-directory:
+        description: "Directory containing fly.toml (repo root by default)"
+        type: string
+        default: "."
+      fly-config-path:
+        description: "Path (relative to working-directory) to the fly config file"
+        type: string
+        default: "fly.toml"
+    secrets:
+      FLY_API_TOKEN:
+        description: "Fly.io deploy token (flyctl auth token)"
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy
+        run: flyctl deploy --remote-only -c ${{ inputs.fly-config-path }}
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
